@@ -1,0 +1,71 @@
+import sys
+import re
+		
+def tokenize(stream):
+	reList = [
+                ('Comment',             r'(\/\*(.|\n)*\*\/)|(\/\/.*.*)'),
+		('OPERATOR',	        r'((?<![\+\-\^\*/%])[\+\-]|[\^\*/%])(?=([a-zA-z0-9_\s\(]))'),	
+		('KEYWORD',	        r'(case|default|if|else|switch|while|do|for|goto|continue|break|return|int|char|double|float|long)(?=(\s|\())'),
+                ('FUNCTIONID',	        r'[a-zA-Z_][a-zA-Z0-9_]*(?=([ \t]+)?\()'),
+		('VARIABLEID',	        r'[+-]?[a-zA-Z_][a-zA-Z0-9_]*(?!([ \t]+)?\()'),
+                ('NUMBER',		r'[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?'),
+		('BOOLEAN',             r'true|false'),
+		('RPAR',		r'[)]'),
+                ('LPAR',		r'[(]'),
+		('RCURL',		r'[{]'),
+		('LCURL',		r'[}]'),
+                ('LBRA',                r'[[]'),
+                ('RBRA',                r'[]]'),
+                ('EQUAL',               r'(==)'),
+                ('NE',                  r'(!=)'),
+                ('GE' ,                 r'\>='),
+                ('LE',                  r'\<='),
+                ('LT',                  r'\<'),
+                ('GT',                  r'\>'),
+                ('OR',                  r'\|\|'),
+                ('AND',                 r'&&'),
+                ('BAND',                r'&'),
+                ('BOR',                 r'\|'),
+                ('NOT',                 r'\!'),
+                ('BNOT',                r'~'),
+                ('PLUSASSIGN',          r'\+='),
+                ('MINUSASSIGN',         r'\-='),
+                ('MULASSIGN',           r'\*='),
+                ('DIVASSIGN',           r'\/='),
+                ('MODASSIGN',           r'%='),
+		('ASSIGN',		r'='),
+                ('INC',                 r'\+\+'),
+                ('SEMICOL',		r';'),
+                ('COMMA',               r','),
+		('NEWLINE',		r'\n'),
+                ('STRING',              r'\"(\\.|[^\\"])*\"'),
+		('SKIP',		r'[ \t]'),
+	]
+
+	totalRe = '|'.join('(?P<%s>%s)' % pair for pair in reList)
+	opName = {'+': 'PLUS', '-': 'MINUS', '*': 'MUL', '/': 'DIV', '%': 'MOD'}
+	nextToken = re.compile(totalRe).match
+		
+	pos = lineStart = 0
+	lineNumber = 1	
+	token = nextToken(stream)
+	while token is not None:
+		type_ = token.lastgroup
+		
+		if type_ == 'NEWLINE':
+			lineStart = pos
+			lineNumber += 1
+		elif type_ != 'SKIP':
+			value = token.group(type_)
+				
+			if type_ == 'OPERATOR' and value in opName.keys():
+				type_ = opName[value]
+				
+			yield {"type" :type_, "value":value, "line":lineNumber, "column":token.start() - lineStart}
+				
+		pos = token.end()
+		token = nextToken(stream, pos)
+	if pos != len(stream):
+		print('Unexpected character %r on line %d' % (stream[pos], lineNumber))
+ 			
+
